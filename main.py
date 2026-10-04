@@ -1,6 +1,7 @@
 import yaml
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Security, HTTPException, status
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -9,6 +10,18 @@ import joblib
 import time
 
 from serving_pipeline import build_features_fastapi
+
+# กำหนดกุญแจและชื่อ Header ที่ต้องการ
+API_KEY = "pea-etp-secret-2026"
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
+
+def verify_api_key(api_key: str = Security(api_key_header)):
+    if api_key != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API Key",
+        )
+    return api_key
 
 class MeterData(BaseModel):
     meter_id: str
@@ -32,10 +45,8 @@ async def lifespan(app: FastAPI):
     IMPUTE_METHOD = config["pipeline"]["imputation_method"]
     TARGET_SHIFT = config["pipeline"].get("target_shift_hours", 1)
 
-    # โหลดไฟล์โมเดลเพียวๆ โดยตรง (ข้ามระบบ OS ได้ 100%)
     try:
         model = joblib.load("model.pkl")
-        print("📦 โหลดโมเดล model.pkl ขึ้น API สำเร็จ!")
     except Exception as e:
         print(f"❌ โหลดโมเดลไม่สำเร็จ: {e}")
 
@@ -43,7 +54,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Energy Trading Platform API", lifespan=lifespan)
 
-@app.post("/api/v1/forecast")
+# เพิ่ม verify_api_key เข้าไปเป็นเงื่อนไขก่อนเข้าถึง Endpoint นี้
+@app.post("/api/v1/forecast", dependencies=[Security(verify_api_key)])
 def get_forecast(request: ForecastRequest):
     start_time = time.time()
     if not model:
