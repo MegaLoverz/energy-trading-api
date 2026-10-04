@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 import pandas as pd
-import mlflow.sklearn
+import joblib
 import time
 
 from serving_pipeline import build_features_fastapi
@@ -32,14 +32,12 @@ async def lifespan(app: FastAPI):
     IMPUTE_METHOD = config["pipeline"]["imputation_method"]
     TARGET_SHIFT = config["pipeline"].get("target_shift_hours", 1)
 
-    mlflow.set_experiment("Energy_Trading_Forecaster")
-    runs = mlflow.search_runs(order_by=["start_time DESC"], max_results=1)
-    
-    if not runs.empty:
-        latest_run_id = runs.iloc[0]["run_id"]
-        model_uri = f"runs:/{latest_run_id}/model_artifacts"
-        print(f"📦 โหลดโมเดล (Scikit-Learn) จาก Run ID: {latest_run_id}")
-        model = mlflow.sklearn.load_model(model_uri)
+    # โหลดไฟล์โมเดลเพียวๆ โดยตรง (ข้ามระบบ OS ได้ 100%)
+    try:
+        model = joblib.load("model.pkl")
+        print("📦 โหลดโมเดล model.pkl ขึ้น API สำเร็จ!")
+    except Exception as e:
+        print(f"❌ โหลดโมเดลไม่สำเร็จ: {e}")
 
     yield 
 
@@ -51,17 +49,12 @@ def get_forecast(request: ForecastRequest):
     if not model:
         return {"error": "Model is not loaded."}
         
-    # 1. แปลง JSON เป็น Pandas DataFrame (สายฟ้าแลบ)
     df_raw = pd.DataFrame([dict(d) for d in request.data])
-    
-    # 2. เข้าโรงงานจิ๋ว
     df_ready = build_features_fastapi(df_raw, method=IMPUTE_METHOD)
     X_infer = df_ready[FEATURE_COLS]
     
-    # 3. ทำนาย
     pred = model.predict(X_infer)[0]
     
-    # 4. คำนวณเวลาเป้าหมายและจับเวลา
     latest_time = df_ready.iloc[0]["timestamp"]
     target_time = latest_time + pd.Timedelta(hours=TARGET_SHIFT)
     process_time_ms = round((time.time() - start_time) * 1000, 2)

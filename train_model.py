@@ -7,6 +7,7 @@ from sklearn.metrics import mean_squared_error
 import numpy as np
 import mlflow
 import mlflow.sklearn
+import joblib
 
 os.environ["PYSPARK_PYTHON"] = sys.executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
@@ -62,4 +63,7 @@ with mlflow.start_run(run_name="Hybrid_Sklearn_Model"):
     
     # ⚠️ บันทึกด้วย mlflow.sklearn (ไม่ใช่ mlflow.spark แล้ว)
     mlflow.sklearn.log_model(rf, "model_artifacts")
-    print("✅ บันทึกโมเดล API ลง MLflow สำเร็จ!")
+    #print("✅ บันทึกโมเดล API ลง MLflow สำเร็จ!")
+    # ✨ NEW: สกัดโมเดลเพียวๆ เป็นไฟล์ .pkl สำหรับใช้บน API
+    joblib.dump(rf, "model.pkl") 
+    print("✅ บันทึกโมเดล model.pkl สำเร็จ!")
