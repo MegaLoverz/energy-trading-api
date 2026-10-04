@@ -1,3 +1,5 @@
 .venv/
 __pycache__/
+amr_data.csv
+Dockerfile.pyspark_backup
 .env

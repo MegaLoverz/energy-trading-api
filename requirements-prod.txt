@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+pydantic
+pandas
+scikit-learn
+pyyaml
+mlflow==3.8.1

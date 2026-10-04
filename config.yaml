@@ -1,0 +1,11 @@
+pipeline:
+  imputation_method: "forward_fill"
+  lag_hours: 1
+  rolling_window: 3
+  target_shift_hours: 1
+  data_path: "amr_data.csv"      # ชี้เป้าไฟล์ข้อมูล
+  test_start_date: "2026-09-28"  # เอา 3 วันสุดท้ายมาเป็นข้อสอบ
+
+model:
+  num_trees: 50                  # เพิ่มต้นไม้เป็น 50 ต้นให้โมเดลฉลาดขึ้น
+  seed: 42
