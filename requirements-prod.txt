@@ -4,4 +4,4 @@ pydantic
 pandas
 scikit-learn
 pyyaml
-mlflow==3.8.1
+joblib
